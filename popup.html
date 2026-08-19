@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>划词翻译助手</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icons/icon32.png" alt="logo" class="logo">
+    <h1>划词翻译助手</h1>
+  </header>
+
+  <section class="card">
+    <h2>⚙ 设置</h2>
+    <label class="row"><input type="checkbox" id="autoSpeak"> 打开翻译卡片时自动朗读</label>
+    <label class="row"><input type="checkbox" id="showNetwork"> 展示网络翻译（MyMemory）</label>
+    <label class="row"><input type="checkbox" id="markLearned"> 重复选词时显示「已学习」标记</label>
+    <div class="row slider-row">
+      <span>朗读语速</span>
+      <input type="range" id="rate" min="0.5" max="2" step="0.1">
+      <span id="rateVal">1.0</span>
+    </div>
+    <div class="save-hint" id="saveHint">已自动保存 ✓</div>
+  </section>
+
+  <section class="card">
+    <h2>📖 学习记录 <span id="stats" class="stats"></span></h2>
+    <input type="search" id="search" placeholder="搜索单词 / 短语…">
+    <ul id="wordList" class="word-list"></ul>
+    <button id="clearAll" class="danger" type="button">清空全部记录</button>
+  </section>
+
+  <footer>划词 → 点击 Logo → 查看翻译 · 点击 🔊 朗读</footer>
+  <script src="popup.js"></script>
+</body>
+</html>
