@@ -31,10 +31,26 @@
     return ext.storage.local.set(obj).catch(function () {});
   }
 
+  /* ================= 调试 / 显隐辅助 ================= */
+  const DEBUG = true;
+  function dbg() {
+    if (!DEBUG) return;
+    try {
+      const args = Array.prototype.slice.call(arguments);
+      args.unshift('[WordWise]');
+      console.log.apply(console, args);
+    } catch (e) { /* ignore */ }
+  }
+  /* 显隐统一走 style.display，不依赖 hidden 属性（避免被页面/自身样式覆盖） */
+  function show(el) { el.hidden = false; el.style.display = ''; }
+  function hide(el) { el.hidden = true; el.style.display = 'none'; }
+
   /* ================= 样式（Shadow DOM 内注入，不受页面样式干扰） ================= */
   const STYLE_CSS = `
 :host { all: initial; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* 修复：作者样式 display:flex 会覆盖 UA 的 [hidden] 规则，这里强制让 hidden 生效 */
+.ww-logo[hidden], .ww-card[hidden], .ww-toast[hidden], .ww-logo-badge[hidden] { display: none !important; }
 .ww-logo {
   position: fixed; z-index: 2147483647; pointer-events: auto;
   width: 34px; height: 34px; border-radius: 50%;
@@ -124,6 +140,7 @@
     settings = Object.assign({}, DEFAULT_SETTINGS, s);
   });
 
+  try {
   ext.storage.onChanged.addListener(function (changes, area) {
     if (area !== 'local') return;
     if (changes[SETTINGS_KEY]) {
@@ -135,6 +152,7 @@
       updateBadge();
     }
   });
+  } catch (e) { dbg('storage.onChanged 注册失败', e); }
 
   /* ================= Shadow UI ================= */
   const host = document.createElement('div');
@@ -153,17 +171,17 @@
   logo.title = '划词翻译';
   logo.setAttribute('aria-label', '划词翻译');
   logo.innerHTML = '<span class="ww-logo-glyph">译</span><span class="ww-logo-badge" hidden></span>';
-  logo.hidden = true;
+  hide(logo);
   logo.addEventListener('mousedown', function (e) { e.preventDefault(); });
   logo.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); toggleCard(); });
 
   const card = document.createElement('div');
   card.className = 'ww-card';
-  card.hidden = true;
+  hide(card);
 
   const toast = document.createElement('div');
   toast.className = 'ww-toast';
-  toast.hidden = true;
+  hide(toast);
 
   shadow.appendChild(logo);
   shadow.appendChild(card);
@@ -178,8 +196,14 @@
     try {
       const range = sel.getRangeAt(0);
       const rects = range.getClientRects();
-      if (!rects || rects.length === 0) return null;
-      rect = rects[rects.length - 1];
+      if (rects && rects.length > 0) {
+        rect = rects[rects.length - 1];
+      } else {
+        // 回退：getClientRects 为空时使用选区整体包围盒
+        const br = range.getBoundingClientRect();
+        if (br && (br.width || br.height)) rect = br;
+      }
+      if (!rect) return null;
     } catch (e) { return null; }
     let node = sel.anchorNode;
     if (node && node.nodeType === 3) node = node.parentNode;
@@ -196,7 +220,8 @@
     lastSelection = cur;
     selText = cur.text.length > MAX_TEXT ? cur.text.slice(0, MAX_TEXT) : cur.text;
     positionLogo(cur.rect);
-    logo.hidden = false;
+    show(logo);
+    dbg('划词显示 Logo:', JSON.stringify(selText.slice(0, 40)));
     checkLearned(selText).then(function (info) {
       if (lastSelection && lastSelection.text === cur.text) {
         selInfo = info;
@@ -254,22 +279,22 @@
     card.style.visibility = 'visible';
   }
 
-  function hideLogo() { logo.hidden = true; }
+  function hideLogo() { hide(logo); }
 
   function hideAll() {
     hideLogo();
-    card.hidden = true;
+    hide(card);
     cardOpen = false;
   }
 
   function updateBadge() {
     const badge = logo.querySelector('.ww-logo-badge');
     if (!settings.markLearned || !selInfo) {
-      badge.hidden = true;
+      hide(badge);
       badge.textContent = '';
       return;
     }
-    badge.hidden = false;
+    show(badge);
     badge.textContent = '已学 ' + selInfo.count;
   }
 
@@ -354,14 +379,14 @@
       .then(function (res) {
         renderCard(text, selInfo, res || {});
         positionCard();
-        card.hidden = false;
+        show(card);
         cardOpen = true;
         if (settings.autoSpeak && res && !res.error) speak(text, langForDetected(res.detected));
       })
       .catch(function () {
         renderCard(text, selInfo, { error: '翻译服务连接失败，请检查网络后重试' });
         positionCard();
-        card.hidden = false;
+        show(card);
         cardOpen = true;
       })
       .then(function () {
@@ -455,8 +480,10 @@
     toast.textContent = msg;
     toast.style.left = Math.round(r.left + r.width / 2 - 30) + 'px';
     toast.style.top = Math.round(r.top - 32) + 'px';
-    toast.hidden = false;
+    show(toast);
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toast.hidden = true; }, 1200);
+    toastTimer = setTimeout(function () { hide(toast); }, 1200);
   }
+
+  dbg('content script loaded');
 })();

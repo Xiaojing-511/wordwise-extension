@@ -1,0 +1,12 @@
+{
+  "name": "wordwise-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs"
+  },
+  "dependencies": {
+    "chrome-remote-interface": "^0.34.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}
