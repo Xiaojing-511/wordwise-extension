@@ -53,6 +53,7 @@
 .ww-logo[hidden], .ww-card[hidden], .ww-toast[hidden], .ww-logo-badge[hidden] { display: none !important; }
 .ww-logo {
   position: fixed; z-index: 2147483647; pointer-events: auto;
+  left: -9999px; top: -9999px; /* 默认移出屏幕，未定位前绝不显示在页面角落 */
   width: 34px; height: 34px; border-radius: 50%;
   background: linear-gradient(135deg, #5b8cff 0%, #3b5bdb 100%);
   border: 2px solid #ffffff;
@@ -79,6 +80,7 @@
 }
 .ww-card {
   position: fixed; z-index: 2147483647; pointer-events: auto;
+  left: -9999px; top: -9999px; /* 默认移出屏幕，未定位前不显示 */
   width: 360px; max-height: 75vh; overflow-y: auto;
   background: #ffffff; color: #1f2937;
   border-radius: 14px;
@@ -218,6 +220,12 @@
     if (cardOpen || busy) return;
     const cur = currentSelection();
     if (!cur) { hideLogo(); lastSelection = null; dismissed = false; return; }
+    // 选区不可见（零尺寸或完全在视口外）时不显示 Logo，避免其被钳制到左上角
+    const r = cur.rect;
+    if (!r || (r.width === 0 && r.height === 0) || r.bottom <= 0 || r.right <= 0 || r.left >= window.innerWidth || r.top >= window.innerHeight) {
+      hideLogo();
+      return;
+    }
     if (dismissed) {
       // 用户已取消：同一选区不再自动弹出，直到选区内容变化
       if (lastSelection && lastSelection.text === cur.text) return;
@@ -227,7 +235,7 @@
     selText = cur.text.length > MAX_TEXT ? cur.text.slice(0, MAX_TEXT) : cur.text;
     positionLogo(cur.rect);
     show(logo);
-    dbg('划词显示 Logo:', JSON.stringify(selText.slice(0, 40)));
+    dbg('划词显示 Logo:', JSON.stringify(selText.slice(0, 40)), 'rect:', JSON.stringify({ x: Math.round(r.x), y: Math.round(r.y), w: r.width, h: r.height }));
     checkLearned(selText).then(function (info) {
       if (lastSelection && lastSelection.text === cur.text) {
         selInfo = info;

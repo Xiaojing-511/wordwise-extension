@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "划词翻译助手 WordWise",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "网页划词即译：中英互译、网络翻译、点击朗读、重复选词自动标记已学习",
   "permissions": ["storage"],
   "host_permissions": [
