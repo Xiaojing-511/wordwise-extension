@@ -134,6 +134,7 @@
   let cardOpen = false;
   let busy = false;
   let lastSelection = null;
+  let dismissed = false; // 用户主动取消（点击外部/Esc/滚动）后，同一选区不再自动弹出
   let toastTimer = null;
 
   storeGet(SETTINGS_KEY, {}).then(function (s) {
@@ -216,7 +217,12 @@
   function onSelection() {
     if (cardOpen || busy) return;
     const cur = currentSelection();
-    if (!cur) { hideLogo(); lastSelection = null; return; }
+    if (!cur) { hideLogo(); lastSelection = null; dismissed = false; return; }
+    if (dismissed) {
+      // 用户已取消：同一选区不再自动弹出，直到选区内容变化
+      if (lastSelection && lastSelection.text === cur.text) return;
+      dismissed = false;
+    }
     lastSelection = cur;
     selText = cur.text.length > MAX_TEXT ? cur.text.slice(0, MAX_TEXT) : cur.text;
     positionLogo(cur.rect);
@@ -239,11 +245,20 @@
     clearTimeout(selTimer);
     selTimer = setTimeout(onSelection, 0);
   }, true);
-  document.addEventListener('scroll', function () { if (!cardOpen) hideLogo(); }, true);
+  document.addEventListener('scroll', function () {
+    if (!cardOpen) { hideLogo(); dismissed = true; }
+  }, true);
   window.addEventListener('resize', hideAll);
   document.addEventListener('mousedown', function (e) {
     if (host.contains(e.target)) return;
-    if (cardOpen) hideAll();
+    if (cardOpen) {
+      hideAll();
+    } else if (!logo.hidden) {
+      // 点击页面其它位置（未打开卡片）也隐藏 Logo，并抑制同一选区弹回
+      hideLogo();
+      dismissed = true;
+      dbg('隐藏 Logo（点击外部取消）');
+    }
   }, true);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') hideAll();
@@ -285,6 +300,7 @@
     hideLogo();
     hide(card);
     cardOpen = false;
+    dismissed = true;
   }
 
   function updateBadge() {
